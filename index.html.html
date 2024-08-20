@@ -1,0 +1,138 @@
+<html><head><base href="." />
+<title>Metronome with Random BPM</title>
+<style>
+    body {
+        font-family: Arial, sans-serif;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        height: 100vh;
+        margin: 0;
+        background-color: #f0f0f0;
+    }
+    .container {
+        background-color: white;
+        padding: 20px;
+        border-radius: 10px;
+        box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    }
+    input[type="file"], input[type="number"], button {
+        margin: 10px 0;
+    }
+    #tempoSlider {
+        width: 300px;
+    }
+    #currentTempo {
+        font-size: 24px;
+        font-weight: bold;
+    }
+    .input-group {
+        display: flex;
+        justify-content: space-between;
+        width: 300px;
+    }
+    .input-group input {
+        width: 45%;
+    }
+</style>
+</head>
+<body>
+    <div class="container">
+        <h1>Metronome with Random BPM</h1>
+        <input type="file" id="audioFileInput" accept=".wav,.mp3">
+        <div>
+            <input type="range" id="tempoSlider" min="40" max="208" value="120">
+            <div id="currentTempo">120 BPM</div>
+        </div>
+        <div class="input-group">
+            <input type="number" id="minBPM" placeholder="Min BPM" min="40" max="208" value="60">
+            <input type="number" id="maxBPM" placeholder="Max BPM" min="40" max="208" value="180">
+        </div>
+        <button id="magicButton">Magic</button>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
+    <script>
+        let player;
+        let interval;
+        let magicInterval;
+        let isPlaying = false;
+        let minBPM = 60;
+        let maxBPM = 180;
+
+        const audioFileInput = document.getElementById('audioFileInput');
+        const tempoSlider = document.getElementById('tempoSlider');
+        const currentTempo = document.getElementById('currentTempo');
+        const minBPMInput = document.getElementById('minBPM');
+        const maxBPMInput = document.getElementById('maxBPM');
+        const magicButton = document.getElementById('magicButton');
+
+        audioFileInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            const reader = new FileReader();
+
+            reader.onload = function(e) {
+                const arrayBuffer = e.target.result;
+                Tone.context.decodeAudioData(arrayBuffer).then((audioBuffer) => {
+                    player = new Tone.Player(audioBuffer).toDestination();
+                    startMetronome();
+                });
+            };
+
+            reader.readAsArrayBuffer(file);
+        });
+
+        tempoSlider.addEventListener('input', () => {
+            updateTempo(tempoSlider.value);
+        });
+
+        minBPMInput.addEventListener('change', () => {
+            minBPM = parseInt(minBPMInput.value);
+        });
+
+        maxBPMInput.addEventListener('change', () => {
+            maxBPM = parseInt(maxBPMInput.value);
+        });
+
+        magicButton.addEventListener('click', toggleMagicMode);
+
+        function startMetronome() {
+            if (player) {
+                isPlaying = true;
+                updateTempo(tempoSlider.value);
+            }
+        }
+
+        function updateTempo(bpm) {
+            if (isPlaying) {
+                clearInterval(interval);
+                interval = setInterval(() => {
+                    player.start();
+                }, (60 / bpm) * 1000);
+            }
+            currentTempo.textContent = `${bpm} BPM`;
+        }
+
+function toggleMagicMode() {
+    if (magicInterval) {
+        clearInterval(magicInterval);
+        magicInterval = null;
+        magicButton.textContent = 'Magic';
+    } else {
+        magicButton.textContent = 'Stop Magic';
+        magicInterval = setInterval(() => {
+            const currentBPM = parseInt(tempoSlider.value);
+            // Use weighted randomness to favor +5 changes
+            const change = Math.random() < 0.65 ? 5 : -5; // 75% chance for +5, 25% for -5
+            let newBPM = currentBPM + change;
+            newBPM = Math.max(minBPM, Math.min(maxBPM, newBPM));
+            tempoSlider.value = newBPM;
+            updateTempo(newBPM);
+        }, 15000);
+    }
+}
+
+    </script>
+</body>
+</html>
